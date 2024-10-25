@@ -36,7 +36,9 @@ def process_term_bank(term_bank, archive):
     with archive.open(term_bank, "r") as f:
         json_dict = json.load(f)
         for term_list in json_dict:
-            word = term_list[0]
+            word = (
+                term_list[0].replace("\ufeff", "").strip()
+            )  # Remove the BOM character common in some Chinese frequency lists
             frequency, dict_entry = handle_term_list(term_list, word)
             if dict_entry:
                 frequency_dict[frequency].append(dict_entry)
