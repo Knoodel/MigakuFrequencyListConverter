@@ -36,18 +36,17 @@ def process_term_bank(term_bank, archive):
     with archive.open(term_bank, "r") as f:
         json_dict = json.load(f)
         for term_list in json_dict:
-            word = (
-                term_list[0].replace("\ufeff", "").strip()
-            )  # Remove the BOM character common in some Chinese frequency lists
-            frequency, dict_entry = handle_term_list(term_list, word)
+            frequency, dict_entry = handle_term_list(term_list)
             if dict_entry:
                 frequency_dict[frequency].append(dict_entry)
 
     return frequency_dict
 
 
-def handle_term_list(term_list, word):
+def handle_term_list(term_list):
     """Extract frequency and create a dictionary entry from term_list."""
+    word = term_list[0].replace("\ufeff", "").strip()  # Remove the BOM character
+
     if isinstance(term_list[2], dict):
         info_dict = term_list[2]
         frequency = info_dict.get("value", None) or info_dict["frequency"]
@@ -59,30 +58,16 @@ def handle_term_list(term_list, word):
         if reading:
             reading = to_katakana(info_dict["reading"])
             return frequency, [word, reading]
-        else:
-            return frequency, [word]
-    if isinstance(term_list[2], str):
+    elif isinstance(term_list[2], str):
         frequency = term_list[2].split("/")[0]
-        return frequency, [word]
-    if isinstance(term_list[2], int):
+    elif isinstance(term_list[2], int):
         frequency = term_list[2]
-        return frequency, [word]
+    else:
+        # Unsupported format
+        logger.warning(f"Unsupported format: {term_list}")
+        raise ValueError(f"Unsupported format: {term_list}")
 
-    # Unsupported format
-    logger.warning(f"Unsupported format in {term_list}: ")
-    return None, None
-
-
-def convert_hiragana_to_katakana(frequency_dict):
-    """Convert hiragana readings to katakana if necessary."""
-    logger.debug("Converting hiragana readings to katakana.")
-    for frequency, words in frequency_dict.items():
-        for i, word_and_reading_or_word in enumerate(words):
-            if len(word_and_reading_or_word) == 2:
-                continue
-            word = word_and_reading_or_word[0]
-            if is_kana(word):
-                frequency_dict[frequency][i].append(to_katakana(word))
+    return frequency, [word]
 
 
 def save_frequency_list(frequency_list, output_path):
@@ -139,19 +124,14 @@ def main():
 
             # Converting the files to a single dictionary
             frequency_dict = defaultdict(list)
-            has_readings = False
 
             for term_bank in term_banks:
                 frequency_dict.update(process_term_bank(term_bank, archive))
 
-            # Convert hiragana readings to katakana if necessary
-            if has_readings:
-                convert_hiragana_to_katakana(frequency_dict)
-
             # Create a Migaku format frequency list
             logger.debug("Creating a frequency list.")
             frequency_list = [
-                term if has_readings else term[0]
+                term if len(term) > 1 else term[0]
                 for frequency, words in sorted(
                     frequency_dict.items(), key=lambda item: item[0]
                 )
