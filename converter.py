@@ -98,6 +98,12 @@ def main():
         default=0,
         help="Number of test cases to print after conversion.",
     )
+    parser.add_argument(
+        "-r",
+        "--is_reverse",
+        action="store_true",
+        help="Use this if the dictionaries uses number of occurences rather than frequency.",
+    )
     args = parser.parse_args()
 
     # Converter code starts
@@ -133,7 +139,7 @@ def main():
             frequency_list = [
                 term if len(term) > 1 else term[0]
                 for frequency, words in sorted(
-                    frequency_dict.items(), key=lambda item: item[0]
+                    frequency_dict.items(), key=lambda item: item[0], reverse=args.is_reverse
                 )
                 for term in words
             ]
