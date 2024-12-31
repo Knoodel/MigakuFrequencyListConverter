@@ -13,7 +13,7 @@ git clone https://github.com/Knoodel/MigakuFrequencyListConverter.git
 2. Install the necessary libraries
 
 ```bash
-cd git clone MigakuFrequencyListConverter
+cd MigakuFrequencyListConverter
 pip install -r requirements.txt
 ```
 
