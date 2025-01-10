@@ -25,6 +25,7 @@ def setup_logging():
         filename=LOG_FILE,
         level=logging.DEBUG,
         format="%(levelname)s : %(message)s",
+        encoding="utf-8",
     )
 
 
@@ -68,6 +69,45 @@ def handle_term_list(term_list):
         raise ValueError(f"Unsupported format: {term_list}")
 
     return frequency, [word]
+
+
+def create_frequency_list(archive_path, is_reverse=False):
+    """Creates frequency list from a given path"""
+    logger.info(f"Processing archive: {archive_path.name}.")
+
+    # Loading dictionary files
+    archive = zipfile.ZipFile(archive_path)
+    term_banks = [
+        file_info.filename
+        for file_info in archive.filelist
+        if file_info.filename.startswith("term_meta_bank_")
+    ]
+    logger.debug(f"Found {len(term_banks)} term bank files in {archive_path.name}.")
+
+    # Converting the files to a single dictionary
+    frequency_dict = defaultdict(list)
+
+    for term_bank in term_banks:
+        frequency_dict.update(process_term_bank(term_bank, archive))
+
+    # Create a Migaku format frequency list
+    logger.debug("Creating a frequency list.")
+    frequency_list = []
+    for frequency, words in sorted(
+        frequency_dict.items(),
+        key=lambda item: item[0],
+        reverse=is_reverse,
+    ):
+        for term in words:
+            word = term if len(term) > 1 else term[0]
+            if word not in frequency_list:
+                frequency_list.append(word)
+            else:
+                logger.debug(
+                    f"Duplicate entry detected for {word} at {frequency}. Skipping."
+                )
+
+    return frequency_list
 
 
 def save_frequency_list(frequency_list, output_path):
@@ -115,34 +155,7 @@ def main():
             logger.warning(f"Skipped {archive_path.name}: unsupported format.")
             continue
         try:
-            logger.info(f"Processing archive: {archive_path.name}.")
-
-            # Loading dictionary files
-            archive = zipfile.ZipFile(archive_path)
-            term_banks = [
-                file_info.filename
-                for file_info in archive.filelist
-                if file_info.filename.startswith("term_meta_bank_")
-            ]
-            logger.debug(
-                f"Found {len(term_banks)} term bank files in {archive_path.name}."
-            )
-
-            # Converting the files to a single dictionary
-            frequency_dict = defaultdict(list)
-
-            for term_bank in term_banks:
-                frequency_dict.update(process_term_bank(term_bank, archive))
-
-            # Create a Migaku format frequency list
-            logger.debug("Creating a frequency list.")
-            frequency_list = [
-                term if len(term) > 1 else term[0]
-                for frequency, words in sorted(
-                    frequency_dict.items(), key=lambda item: item[0], reverse=args.is_reverse
-                )
-                for term in words
-            ]
+            frequency_list = create_frequency_list(archive_path, args.is_reverse)
 
             # Ensure the output directory exists
             OUTPUT_FOLDER.mkdir(exist_ok=True)

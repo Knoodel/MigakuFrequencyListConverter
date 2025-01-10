@@ -2,6 +2,8 @@
 
 Script that converts Yomichan frequency lists to Migaku format
 
+You can find already converted frequency lists here: [Convereted Frequency Lists](https://drive.google.com/drive/folders/1bDX8qJKjQDlhRrFvzBnkriXGAvy4RyVS)
+
 ## Basic Usage
 
 1. Clone the repository
